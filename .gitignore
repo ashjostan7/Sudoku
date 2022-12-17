@@ -127,3 +127,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Folders to ignore:
+edge_detection\edges_output
+edge_detection\intersections
+edge_detection\squares
