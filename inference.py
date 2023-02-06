@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 import torch
 import torch.nn as nn
 from torchvision import transforms
@@ -57,6 +58,7 @@ class tinyVGG(nn.Module):
 
     return x
 
+
 class classify():
 
     def __init__(self, model_path):
@@ -68,18 +70,49 @@ class classify():
         self.model.eval()
         #self.classes = 
         print(self.model)
+    
+    def resize_to_28x28(self, img):
+
+        img_h, img_w = img.shape
+        dim_size_max = max(img.shape)
+
+        if dim_size_max == img_w:
+            im_h = (26 * img_h) // img_w
+            if im_h <= 0 or img_w <= 0:
+                print("Invalid Image Dimention: ", im_h, img_w, img_h)
+            tmp_img = cv2.resize(img, (26,im_h),0,0,cv2.INTER_NEAREST)
+        else:
+            im_w = (26 * img_w) // img_h
+            if im_w <= 0 or img_h <= 0:
+                print("Invalid Image Dimention: ", im_w, img_w, img_h)
+            tmp_img = cv2.resize(img, (im_w, 26),0,0,cv2.INTER_NEAREST)
+
+        out_img = np.zeros((28, 28), dtype=np.ubyte)
+
+        nb_h, nb_w = out_img.shape
+        na_h, na_w = tmp_img.shape
+        y_min = (nb_w) // 2 - (na_w // 2)
+        y_max = y_min + na_w
+        x_min = (nb_h) // 2 - (na_h // 2)
+        x_max = x_min + na_h
+
+        out_img[x_min:x_max, y_min:y_max] = tmp_img
+
+        return out_img
 
     def infer(self,image):
 
         img = cv2.imread(image)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) 
-        img = cv2.resize(img, (28, 28))
+        img = cv2.bitwise_not(img)
+        img = self.resize_to_28x28(img)
         cv2.imwrite("rezised.jpg", img)
-        transform = transforms.ToTensor()
         
+        transform = transforms.ToTensor()
         img_tensor = transform(img).to(self.device)
         img_tensor =img_tensor.unsqueeze(0)
-        print(img_tensor.shape)
+
+        print(img_tensor)
 
         with torch.inference_mode():
             pred = self.model(img_tensor)
@@ -91,9 +124,18 @@ class classify():
 
 if __name__ == "__main__":
 
-    classifier = classify("D:\sudoku\model\MNIST_Classifier.pt")
+    #classifier = classify("D:\sudoku\model\MNIST_Classifier.pt")
     #classifier = classify("D:\sudoku\model\MNIST_Classifier_noStetDict.pt")
+    classifier = classify("D:\sudoku\model\MNIST_Classifier_50Epochs.pt")
 
-    img = "D:\sudoku\edge_detection\squares\square2.jpg"
-    img = "D:\sudoku\edge_detection\squares\square46.jpg"
+    #img = "D:\sudoku\edge_detection\squares\square2.jpg" #
+    # img = "D:\sudoku\edge_detection\squares\square46.jpg" #9
+    #img= "D:\sudoku\edge_detection\squares\square48.jpg" #2
+    img= "D:\sudoku\edge_detection\squares\square36.jpg" #8 -> 0
+    # img = "D:\sudoku\edge_detection\squares\square52.jpg" #Empty
+    #img = "D:\sudoku\edge_detection\squares\square26.jpg" #3
+    # img = "D:\sudoku\edge_detection\squares\square16.jpg" #5
+    #img = "D:\sudoku\edge_detection\squares\square4.jpg" #7 -> 2
+    # img = "D:\sudoku\edge_detection\squares\square2.jpg" #4
+    #img = "D:\sudoku\MNIST_Test\stesT1.jpg"
     classifier.infer(img)
